@@ -1,6 +1,6 @@
 {
   "name": "iobroker.huawei-charger",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "This adapter enables seamless integration of Huawei AC Chargers with ioBroker using the Modbus-TCP protocol. It allows real-time monitoring and control of charging parameters such as voltage, current, and power, with a user-friendly interface for configuration and logging.",
   "author": {
     "name": "DNAngelX",

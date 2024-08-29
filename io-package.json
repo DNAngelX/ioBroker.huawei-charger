@@ -1,111 +1,124 @@
 {
-	"common": {
-		"name": "huawei-charger",
-		"version": "0.0.1",
-		"news": {
-			"0.0.1": {
-				"en": "initial release",
-				"de": "Erstveröffentlichung",
-				"ru": "Начальная версия",
-				"pt": "lançamento inicial",
-				"nl": "Eerste uitgave",
-				"fr": "Première version",
-				"it": "Versione iniziale",
-				"es": "Versión inicial",
-				"pl": "Pierwsze wydanie",
-				"zh-cn": "首次出版"
-			}
-		},
-		"title": "Huawei Charger",
-		"titleLang": {
-			"en": "Huawei Charger",
-			"de": "Huawei Charger",
-			"ru": "Huawei Charger",
-			"pt": "Huawei Charger",
-			"nl": "Huawei Charger",
-			"fr": "Huawei Charger",
-			"it": "Huawei Charger",
-			"es": "Huawei Charger",
-			"pl": "Huawei Charger",
-			"zh-cn": "Huawei Charger"
-		},
-		"desc": {
-			"en": "This adapter enables seamless integration of Huawei AC Chargers with ioBroker using the Modbus-TCP protocol. It allows real-time monitoring and control of charging parameters such as voltage, current, and power, with a user-friendly interface for configuration and logging.",
-			"de": "This adapter enables seamless integration of Huawei AC Chargers with ioBroker using the Modbus-TCP protocol. It allows real-time monitoring and control of charging parameters such as voltage, current, and power, with a user-friendly interface for configuration and logging.",
-			"ru": "This adapter enables seamless integration of Huawei AC Chargers with ioBroker using the Modbus-TCP protocol. It allows real-time monitoring and control of charging parameters such as voltage, current, and power, with a user-friendly interface for configuration and logging.",
-			"pt": "This adapter enables seamless integration of Huawei AC Chargers with ioBroker using the Modbus-TCP protocol. It allows real-time monitoring and control of charging parameters such as voltage, current, and power, with a user-friendly interface for configuration and logging.",
-			"nl": "This adapter enables seamless integration of Huawei AC Chargers with ioBroker using the Modbus-TCP protocol. It allows real-time monitoring and control of charging parameters such as voltage, current, and power, with a user-friendly interface for configuration and logging.",
-			"fr": "This adapter enables seamless integration of Huawei AC Chargers with ioBroker using the Modbus-TCP protocol. It allows real-time monitoring and control of charging parameters such as voltage, current, and power, with a user-friendly interface for configuration and logging.",
-			"it": "This adapter enables seamless integration of Huawei AC Chargers with ioBroker using the Modbus-TCP protocol. It allows real-time monitoring and control of charging parameters such as voltage, current, and power, with a user-friendly interface for configuration and logging.",
-			"es": "This adapter enables seamless integration of Huawei AC Chargers with ioBroker using the Modbus-TCP protocol. It allows real-time monitoring and control of charging parameters such as voltage, current, and power, with a user-friendly interface for configuration and logging.",
-			"pl": "This adapter enables seamless integration of Huawei AC Chargers with ioBroker using the Modbus-TCP protocol. It allows real-time monitoring and control of charging parameters such as voltage, current, and power, with a user-friendly interface for configuration and logging.",
-			"zh-cn": "This adapter enables seamless integration of Huawei AC Chargers with ioBroker using the Modbus-TCP protocol. It allows real-time monitoring and control of charging parameters such as voltage, current, and power, with a user-friendly interface for configuration and logging."
-		},
-		"authors": [
-			"DNAngelX <stolly82@web.de>"
-		],
-		"keywords": [
-			"Huawei",
-			"AC Charger",
-			"Modbus-TCP",
-			"energy monitoring",
-			"EV charging",
-			"smart home",
-			"power management",
-			"real-time data",
-			"integration"
-		],
-		"license": "MIT",
-		"platform": "Javascript/Node.js",
-		"main": "main.js",
-		"icon": "huawei-charger.png",
-		"enabled": true,
-		"extIcon": "https://raw.githubusercontent.com/DNAngelX/ioBroker.huawei-charger/main/admin/huawei-charger.png",
-		"readme": "https://github.com/DNAngelX/ioBroker.huawei-charger/blob/main/README.md",
-		"loglevel": "info",
-		"mode": "daemon",
-		"type": "energy",
-		"compact": true,
-		"connectionType": "local",
-		"dataSource": "poll",
-		"adminUI": {
-			"config": "materialize"
-		},
-		"eraseOnUpload": true,
-		"dependencies": [
-			{
-				"js-controller": ">=3.3.22"
-			}
-		],
-		"globalDependencies": [
-			{
-				"admin": ">=5.0.0"
-			}
-		]
-	},
-	"native": {},
-	"objects": [],
-	"instanceObjects": [
-		{
-			"_id": "info",
-			"type": "channel",
-			"common": {
-				"name": "Information"
-			},
-			"native": {}
-		},
-		{
-			"_id": "info.connection",
-			"type": "state",
-			"common": {
-				"role": "indicator.connected",
-				"name": "Device or service connected",
-				"type": "boolean",
-				"read": true,
-				"write": false,
-				"def": false
-			},
-			"native": {}
-		}
-	]
+  "common": {
+    "name": "huawei-charger",
+    "version": "1.0.0",
+    "news": {
+      "1.0.0": {
+        "en": "initial release",
+        "de": "erstausstrahlung",
+        "ru": "первоначальный выпуск",
+        "pt": "lançamento inicial",
+        "nl": "eerste release",
+        "fr": "libération initiale",
+        "it": "rilascio iniziale",
+        "es": "liberación inicial",
+        "pl": "początkowe zwolnienie",
+        "uk": "початковий реліз",
+        "zh-cn": "初步释放"
+      },
+      "0.0.1": {
+        "en": "initial release",
+        "de": "Erstveröffentlichung",
+        "ru": "Начальная версия",
+        "pt": "lançamento inicial",
+        "nl": "Eerste uitgave",
+        "fr": "Première version",
+        "it": "Versione iniziale",
+        "es": "Versión inicial",
+        "pl": "Pierwsze wydanie",
+        "zh-cn": "首次出版"
+      }
+    },
+    "title": "Huawei Charger",
+    "titleLang": {
+      "en": "Huawei Charger",
+      "de": "Huawei Charger",
+      "ru": "Huawei Charger",
+      "pt": "Huawei Charger",
+      "nl": "Huawei Charger",
+      "fr": "Huawei Charger",
+      "it": "Huawei Charger",
+      "es": "Huawei Charger",
+      "pl": "Huawei Charger",
+      "zh-cn": "Huawei Charger"
+    },
+    "desc": {
+      "en": "This adapter enables seamless integration of Huawei AC Chargers with ioBroker using the Modbus-TCP protocol. It allows real-time monitoring and control of charging parameters such as voltage, current, and power, with a user-friendly interface for configuration and logging.",
+      "de": "This adapter enables seamless integration of Huawei AC Chargers with ioBroker using the Modbus-TCP protocol. It allows real-time monitoring and control of charging parameters such as voltage, current, and power, with a user-friendly interface for configuration and logging.",
+      "ru": "This adapter enables seamless integration of Huawei AC Chargers with ioBroker using the Modbus-TCP protocol. It allows real-time monitoring and control of charging parameters such as voltage, current, and power, with a user-friendly interface for configuration and logging.",
+      "pt": "This adapter enables seamless integration of Huawei AC Chargers with ioBroker using the Modbus-TCP protocol. It allows real-time monitoring and control of charging parameters such as voltage, current, and power, with a user-friendly interface for configuration and logging.",
+      "nl": "This adapter enables seamless integration of Huawei AC Chargers with ioBroker using the Modbus-TCP protocol. It allows real-time monitoring and control of charging parameters such as voltage, current, and power, with a user-friendly interface for configuration and logging.",
+      "fr": "This adapter enables seamless integration of Huawei AC Chargers with ioBroker using the Modbus-TCP protocol. It allows real-time monitoring and control of charging parameters such as voltage, current, and power, with a user-friendly interface for configuration and logging.",
+      "it": "This adapter enables seamless integration of Huawei AC Chargers with ioBroker using the Modbus-TCP protocol. It allows real-time monitoring and control of charging parameters such as voltage, current, and power, with a user-friendly interface for configuration and logging.",
+      "es": "This adapter enables seamless integration of Huawei AC Chargers with ioBroker using the Modbus-TCP protocol. It allows real-time monitoring and control of charging parameters such as voltage, current, and power, with a user-friendly interface for configuration and logging.",
+      "pl": "This adapter enables seamless integration of Huawei AC Chargers with ioBroker using the Modbus-TCP protocol. It allows real-time monitoring and control of charging parameters such as voltage, current, and power, with a user-friendly interface for configuration and logging.",
+      "zh-cn": "This adapter enables seamless integration of Huawei AC Chargers with ioBroker using the Modbus-TCP protocol. It allows real-time monitoring and control of charging parameters such as voltage, current, and power, with a user-friendly interface for configuration and logging."
+    },
+    "authors": [
+      "DNAngelX <stolly82@web.de>"
+    ],
+    "keywords": [
+      "Huawei",
+      "AC Charger",
+      "Modbus-TCP",
+      "energy monitoring",
+      "EV charging",
+      "smart home",
+      "power management",
+      "real-time data",
+      "integration"
+    ],
+    "license": "MIT",
+    "platform": "Javascript/Node.js",
+    "main": "main.js",
+    "icon": "huawei-charger.png",
+    "enabled": true,
+    "extIcon": "https://raw.githubusercontent.com/DNAngelX/ioBroker.huawei-charger/main/admin/huawei-charger.png",
+    "readme": "https://github.com/DNAngelX/ioBroker.huawei-charger/blob/main/README.md",
+    "loglevel": "info",
+    "mode": "daemon",
+    "type": "energy",
+    "compact": true,
+    "connectionType": "local",
+    "dataSource": "poll",
+    "adminUI": {
+      "config": "materialize"
+    },
+    "eraseOnUpload": true,
+    "dependencies": [
+      {
+        "js-controller": ">=3.3.22"
+      }
+    ],
+    "globalDependencies": [
+      {
+        "admin": ">=5.0.0"
+      }
+    ]
+  },
+  "native": {},
+  "objects": [],
+  "instanceObjects": [
+    {
+      "_id": "info",
+      "type": "channel",
+      "common": {
+        "name": "Information"
+      },
+      "native": {}
+    },
+    {
+      "_id": "info.connection",
+      "type": "state",
+      "common": {
+        "role": "indicator.connected",
+        "name": "Device or service connected",
+        "type": "boolean",
+        "read": true,
+        "write": false,
+        "def": false
+      },
+      "native": {}
+    }
+  ]
 }
