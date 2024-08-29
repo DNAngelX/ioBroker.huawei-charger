@@ -1,168 +1,366 @@
 "use strict";
 
-/*
- * Created with @iobroker/create-adapter v2.3.0
- */
-
-// The adapter-core module gives you access to the core ioBroker functions
-// you need to create an adapter
-const utils = require("@iobroker/adapter-core");
-
-// Load your modules here, e.g.:
-// const fs = require("fs");
+const utils = require("@iobroker/adapter-core"); // Adapter core module
+const net = require("net"); // Node.js net module for TCP connections
 
 class HuaweiCharger extends utils.Adapter {
+    constructor(options) {
+        super({
+            ...options,
+            name: "huawei-charger",
+        });
+        this.on("ready", this.onReady.bind(this));
+        this.on("stateChange", this.onStateChange.bind(this));
+        this.on("unload", this.onUnload.bind(this));
 
-	/**
-	 * @param {Partial<utils.AdapterOptions>} [options={}]
-	 */
-	constructor(options) {
-		super({
-			...options,
-			name: "huawei-charger",
-		});
-		this.on("ready", this.onReady.bind(this));
-		this.on("stateChange", this.onStateChange.bind(this));
-		// this.on("objectChange", this.onObjectChange.bind(this));
-		// this.on("message", this.onMessage.bind(this));
-		this.on("unload", this.onUnload.bind(this));
-	}
+        this.client = null; // Placeholder for TCP client
+        this.reconnectInterval = null;
+        this.isConnected = false;
+        this.writeCache = []; // Cache for write operations while disconnected
+    }
 
-	/**
-	 * Is called when databases are connected and adapter received configuration.
-	 */
-	async onReady() {
-		// Initialize your adapter here
+    async onReady() {
+        this.setState("info.connection", false, true);
+        this.log.info("Connecting to Huawei Charger...");
 
-		// Reset the connection indicator during startup
-		this.setState("info.connection", false, true);
+        this.connectToCharger();
+    }
 
-		// The adapters config (in the instance object everything under the attribute "native") is accessible via
-		// this.config:
+    connectToCharger() {
+        const ipAddress = this.config.ipAddress;
+        const port = this.config.port || 502; // Default port 502
+        const unitId = this.config.unitId || 1; // Default unit ID 1
 
-		/*
-		For every state in the system there has to be also an object of type state
-		Here a simple template for a boolean variable named "testVariable"
-		Because every adapter instance uses its own unique namespace variable names can't collide with other adapters variables
-		*/
-		await this.setObjectNotExistsAsync("testVariable", {
-			type: "state",
-			common: {
-				name: "testVariable",
-				type: "boolean",
-				role: "indicator",
-				read: true,
-				write: true,
-			},
-			native: {},
-		});
+        if (!ipAddress || !port) {
+            this.log.error("IP address or port is not specified. Please check your configuration.");
+            return;
+        }
 
-		// In order to get state updates, you need to subscribe to them. The following line adds a subscription for our variable we have created above.
-		this.subscribeStates("testVariable");
-		// You can also add a subscription for multiple states. The following line watches all states starting with "lights."
-		// this.subscribeStates("lights.*");
-		// Or, if you really must, you can also watch all states. Don't do this if you don't need to. Otherwise this will cause a lot of unnecessary load on the system:
-		// this.subscribeStates("*");
+        this.client = new net.Socket();
 
-		/*
-			setState examples
-			you will notice that each setState will cause the stateChange event to fire (because of above subscribeStates cmd)
-		*/
-		// the variable testVariable is set to true as command (ack=false)
-		await this.setStateAsync("testVariable", true);
+        this.client.connect(port, ipAddress, () => {
+            this.isConnected = true;
+            this.clearReconnectInterval();
+            this.setState("info.connection", true, true);
+            this.log.info("Successfully connected to Huawei Charger.");
+            this.setupObjects(); // Set up the object tree
+            this.processWriteCache(); // Process cached writes
+        });
 
-		// same thing, but the value is flagged "ack"
-		// ack should be always set to true if the value is received from or acknowledged from the target system
-		await this.setStateAsync("testVariable", { val: true, ack: true });
+        this.client.on('data', (data) => {
+            this.log.debug(`Received data: ${data.toString('hex')}`);
+            this.processIncomingData(data);
+        });
 
-		// same thing, but the state is deleted after 30s (getState will return null afterwards)
-		await this.setStateAsync("testVariable", { val: true, ack: true, expire: 30 });
+        this.client.on('error', (err) => {
+            this.log.error(`Connection error: ${err.message}`);
+            this.isConnected = false;
+            this.setState("info.connection", false, true);
+            this.scheduleReconnect();
+        });
 
-		// examples for the checkPassword/checkGroup functions
-		let result = await this.checkPasswordAsync("admin", "iobroker");
-		this.log.info("check user admin pw iobroker: " + result);
+        this.client.on('close', () => {
+            if (this.isConnected) {
+                this.log.info("Connection to Huawei Charger closed.");
+                this.isConnected = false;
+                this.setState("info.connection", false, true);
+                this.scheduleReconnect();
+            }
+        });
+    }
 
-		result = await this.checkGroupAsync("admin", "admin");
-		this.log.info("check group user admin group admin: " + result);
-	}
+    scheduleReconnect() {
+        if (this.reconnectInterval) return; // Avoid multiple reconnect intervals
 
-	/**
-	 * Is called when adapter shuts down - callback has to be called under any circumstances!
-	 * @param {() => void} callback
-	 */
-	onUnload(callback) {
+        const reconnectInterval = this.config.reconnectInterval || 60000; // Default to 1 minute
+
+        this.reconnectInterval = setInterval(() => {
+            if (!this.isConnected) {
+                this.log.info("Attempting to reconnect to Huawei Charger...");
+                this.connectToCharger();
+            }
+        }, reconnectInterval);
+    }
+
+    clearReconnectInterval() {
+        if (this.reconnectInterval) {
+            clearInterval(this.reconnectInterval);
+            this.reconnectInterval = null;
+        }
+    }
+
+    // Setup the objects in the ioBroker object tree
+    async setupObjects() {
+        // Phase L1 Output Voltage
+        await this.setObjectNotExistsAsync('charger.phaseL1.voltage', {
+            type: 'state',
+            common: {
+                name: 'Phase L1 Output Voltage',
+                type: 'number',
+                role: 'value.voltage',
+                unit: 'V',
+                read: true,
+                write: false
+            },
+            native: {}
+        });
+
+        // Phase L2 Output Voltage
+        await this.setObjectNotExistsAsync('charger.phaseL2.voltage', {
+            type: 'state',
+            common: {
+                name: 'Phase L2 Output Voltage',
+                type: 'number',
+                role: 'value.voltage',
+                unit: 'V',
+                read: true,
+                write: false
+            },
+            native: {}
+        });
+
+        // Phase L3 Output Voltage
+        await this.setObjectNotExistsAsync('charger.phaseL3.voltage', {
+            type: 'state',
+            common: {
+                name: 'Phase L3 Output Voltage',
+                type: 'number',
+                role: 'value.voltage',
+                unit: 'V',
+                read: true,
+                write: false
+            },
+            native: {}
+        });
+
+        // Phase L1 Output Current
+        await this.setObjectNotExistsAsync('charger.phaseL1.current', {
+            type: 'state',
+            common: {
+                name: 'Phase L1 Output Current',
+                type: 'number',
+                role: 'value.current',
+                unit: 'A',
+                read: true,
+                write: false
+            },
+            native: {}
+        });
+
+        // Phase L2 Output Current
+        await this.setObjectNotExistsAsync('charger.phaseL2.current', {
+            type: 'state',
+            common: {
+                name: 'Phase L2 Output Current',
+                type: 'number',
+                role: 'value.current',
+                unit: 'A',
+                read: true,
+                write: false
+            },
+            native: {}
+        });
+
+        // Phase L3 Output Current
+        await this.setObjectNotExistsAsync('charger.phaseL3.current', {
+            type: 'state',
+            common: {
+                name: 'Phase L3 Output Current',
+                type: 'number',
+                role: 'value.current',
+                unit: 'A',
+                read: true,
+                write: false
+            },
+            native: {}
+        });
+
+        // Total Output Power
+        await this.setObjectNotExistsAsync('charger.totalPower', {
+            type: 'state',
+            common: {
+                name: 'Total Output Power',
+                type: 'number',
+                role: 'value.power',
+                unit: 'kW',
+                read: true,
+                write: false
+            },
+            native: {}
+        });
+
+        // Combined Voltage of all Phases
+        await this.setObjectNotExistsAsync('charger.combined.voltage', {
+            type: 'state',
+            common: {
+                name: 'Combined Voltage (average)',
+                type: 'number',
+                role: 'value.voltage',
+                unit: 'V',
+                read: true,
+                write: false
+            },
+            native: {}
+        });
+
+        // Combined Current of all Phases
+        await this.setObjectNotExistsAsync('charger.combined.current', {
+            type: 'state',
+            common: {
+                name: 'Combined Current (L1 + L2 + L3)',
+                type: 'number',
+                role: 'value.current',
+                unit: 'A',
+                read: true,
+                write: false
+            },
+            native: {}
+        });
+
+        // Max Charging Power (writable)
+        await this.setObjectNotExistsAsync('charger.maxChargingPower', {
+            type: 'state',
+            common: {
+                name: 'Max Charging Power',
+                type: 'number',
+                role: 'level',
+                unit: 'kW',
+                min: 0,
+                max: 22,
+                def: 22,
+                read: true,
+                write: true
+            },
+            native: {}
+        });
+
+        // Charging Control (writable with selection)
+        await this.setObjectNotExistsAsync('charger.chargingControl', {
+            type: 'state',
+            common: {
+                name: 'Charging Control',
+                type: 'number',
+                role: 'state',
+                states: {
+                    0: 'Standby',
+                    1: 'Paused',
+                    2: 'Charging'
+                },
+                def: 0,
+                read: true,
+                write: true
+            },
+            native: {}
+        });
+    }
+
+    // Process incoming data and update corresponding objects
+    processIncomingData(data) {
 		try {
-			// Here you must clear all timeouts or intervals that may still be active
-			// clearTimeout(timeout1);
-			// clearTimeout(timeout2);
-			// ...
-			// clearInterval(interval1);
-
-			callback();
-		} catch (e) {
-			callback();
+			const functionCode = data.readUInt8(7);
+			const registerData = data.slice(8);
+	
+			if (functionCode === 3) { // Read Holding Registers
+				const phaseL1Voltage = registerData.length >= 4 ? Math.round((registerData.readUInt32BE(0) / 10000000) * 100) / 100 : 0;
+				const phaseL2Voltage = registerData.length >= 8 ? Math.round((registerData.readUInt32BE(4) / 10000000) * 100) / 100 : 0;
+				const phaseL3Voltage = registerData.length >= 12 ? Math.round((registerData.readUInt32BE(8) / 10000000) * 100) / 100 : 0;
+				const phaseL1Current = registerData.length >= 16 ? Math.round((registerData.readUInt32BE(12) / 10) * 100) / 100 : 0;
+				const phaseL2Current = registerData.length >= 20 ? Math.round((registerData.readUInt32BE(16) / 10) * 100) / 100 : 0;
+				const phaseL3Current = registerData.length >= 24 ? Math.round((registerData.readUInt32BE(20) / 10) * 100) / 100 : 0;
+				const totalPower = registerData.length >= 28 ? Math.round((registerData.readUInt32BE(24) / 10) * 100) / 100 : 0;
+	
+				let combinedVoltageSum = 0;
+				let combinedVoltageCount = 0;
+	
+				if (phaseL1Voltage > 0) {
+					combinedVoltageSum += phaseL1Voltage;
+					combinedVoltageCount++;
+				}
+				if (phaseL2Voltage > 0) {
+					combinedVoltageSum += phaseL2Voltage;
+					combinedVoltageCount++;
+				}
+				if (phaseL3Voltage > 0) {
+					combinedVoltageSum += phaseL3Voltage;
+					combinedVoltageCount++;
+				}
+	
+				const combinedVoltage = combinedVoltageCount > 0 ? Math.round((combinedVoltageSum / combinedVoltageCount) * 100) / 100 : 0;
+				const combinedCurrent = Math.round((phaseL1Current + phaseL2Current + phaseL3Current) * 100) / 100;
+	
+				this.setStateAsync('charger.phaseL1.voltage', { val: phaseL1Voltage, ack: true });
+				this.setStateAsync('charger.phaseL2.voltage', { val: phaseL2Voltage, ack: true });
+				this.setStateAsync('charger.phaseL3.voltage', { val: phaseL3Voltage, ack: true });
+				this.setStateAsync('charger.phaseL1.current', { val: phaseL1Current, ack: true });
+				this.setStateAsync('charger.phaseL2.current', { val: phaseL2Current, ack: true });
+				this.setStateAsync('charger.phaseL3.current', { val: phaseL3Current, ack: true });
+				this.setStateAsync('charger.totalPower', { val: totalPower, ack: true });
+				this.setStateAsync('charger.combined.voltage', { val: combinedVoltage, ack: true });
+				this.setStateAsync('charger.combined.current', { val: combinedCurrent, ack: true });
+			}
+		} catch (error) {
+			this.log.error(`Failed to process incoming data: ${error.message}`);
 		}
 	}
+	
 
-	// If you need to react to object changes, uncomment the following block and the corresponding line in the constructor.
-	// You also need to subscribe to the objects with `this.subscribeObjects`, similar to `this.subscribeStates`.
-	// /**
-	//  * Is called if a subscribed object changes
-	//  * @param {string} id
-	//  * @param {ioBroker.Object | null | undefined} obj
-	//  */
-	// onObjectChange(id, obj) {
-	// 	if (obj) {
-	// 		// The object was changed
-	// 		this.log.info(`object ${id} changed: ${JSON.stringify(obj)}`);
-	// 	} else {
-	// 		// The object was deleted
-	// 		this.log.info(`object ${id} deleted`);
-	// 	}
-	// }
+    // Handle state changes
+    onStateChange(id, state) {
+        if (state && !state.ack) {
+            this.log.info(`State ${id} changed: ${state.val}`);
 
-	/**
-	 * Is called if a subscribed state changes
-	 * @param {string} id
-	 * @param {ioBroker.State | null | undefined} state
-	 */
-	onStateChange(id, state) {
-		if (state) {
-			// The state was changed
-			this.log.info(`state ${id} changed: ${state.val} (ack = ${state.ack})`);
-		} else {
-			// The state was deleted
-			this.log.info(`state ${id} deleted`);
-		}
-	}
+            if (id === `${this.namespace}.charger.maxChargingPower`) {
+                const maxChargingPower = state.val * 10; // Convert to correct format for sending
+                this.writeToCharger(8192, maxChargingPower);
+            } else if (id === `${this.namespace}.charger.chargingControl`) {
+                const chargingControl = state.val;
+                this.writeToCharger(8198, chargingControl);
+            }
+        }
+    }
 
-	// If you need to accept messages in your adapter, uncomment the following block and the corresponding line in the constructor.
-	// /**
-	//  * Some message was sent to this instance over message box. Used by email, pushover, text2speech, ...
-	//  * Using this method requires "common.messagebox" property to be set to true in io-package.json
-	//  * @param {ioBroker.Message} obj
-	//  */
-	// onMessage(obj) {
-	// 	if (typeof obj === "object" && obj.message) {
-	// 		if (obj.command === "send") {
-	// 			// e.g. send email or pushover or whatever
-	// 			this.log.info("send command");
+    // Write data to the charger
+    writeToCharger(register, value) {
+        if (this.client && this.isConnected) {
+            const buffer = Buffer.alloc(6);
+            buffer.writeUInt16BE(register, 0);
+            buffer.writeUInt32BE(value, 2);
 
-	// 			// Send response in callback if required
-	// 			if (obj.callback) this.sendTo(obj.from, obj.command, "Message received", obj.callback);
-	// 		}
-	// 	}
-	// }
+            this.client.write(buffer, () => {
+                this.log.info(`Wrote value ${value} to register ${register}`);
+            });
+        } else {
+            this.log.warn("Cannot write to charger, not connected.");
+            this.writeCache.push({ register, value });
+        }
+    }
 
+    processWriteCache() {
+        if (this.writeCache.length > 0 && this.isConnected) {
+            this.log.info("Processing cached write operations...");
+            this.writeCache.forEach(entry => {
+                this.writeToCharger(entry.register, entry.value);
+            });
+            this.writeCache = []; // Clear cache after processing
+        }
+    }
+
+    onUnload(callback) {
+        try {
+            if (this.client) {
+                this.client.destroy();
+            }
+            this.clearReconnectInterval();
+            this.log.info("Connection to Huawei Charger closed.");
+            callback();
+        } catch (e) {
+            callback();
+        }
+    }
 }
 
 if (require.main !== module) {
-	// Export the constructor in compact mode
-	/**
-	 * @param {Partial<utils.AdapterOptions>} [options={}]
-	 */
-	module.exports = (options) => new HuaweiCharger(options);
+    module.exports = (options) => new HuaweiCharger(options);
 } else {
-	// otherwise start the instance directly
-	new HuaweiCharger();
+    new HuaweiCharger();
 }

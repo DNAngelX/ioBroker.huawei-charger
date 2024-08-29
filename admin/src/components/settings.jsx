@@ -1,153 +1,79 @@
 import React from "react";
+import { TextField, Typography, FormControl, InputLabel, Select, MenuItem } from "@material-ui/core";
 import { withStyles } from "@material-ui/core/styles";
-import TextField from "@material-ui/core/TextField";
-import Input from "@material-ui/core/Input";
-import FormHelperText from "@material-ui/core/FormHelperText";
-import FormControl from "@material-ui/core/FormControl";
-import Select from "@material-ui/core/Select";
-import MenuItem from "@material-ui/core/MenuItem";
-import FormControlLabel from "@material-ui/core/FormControlLabel";
-import Checkbox from "@material-ui/core/Checkbox";
-import I18n from "@iobroker/adapter-react/i18n";
 
-/**
- * @type {() => Record<string, import("@material-ui/core/styles/withStyles").CreateCSSProperties>}
- */
-const styles = () => ({
-	input: {
-		marginTop: 0,
-		minWidth: 400,
-	},
-	button: {
-		marginRight: 20,
-	},
-	card: {
-		maxWidth: 345,
-		textAlign: "center",
-	},
-	media: {
-		height: 180,
-	},
-	column: {
-		display: "inline-block",
-		verticalAlign: "top",
-		marginRight: 20,
-	},
-	columnLogo: {
-		width: 350,
-		marginRight: 0,
-	},
-	columnSettings: {
-		width: "calc(100% - 370px)",
-	},
-	controlElement: {
-		//background: "#d2d2d2",
-		marginBottom: 5,
-	},
+const styles = theme => ({
+    root: {
+        margin: theme.spacing(2),
+    },
+    input: {
+        margin: theme.spacing(1),
+        width: '100%',
+    },
+    formControl: {
+        margin: theme.spacing(1),
+        minWidth: 120,
+        width: '100%',
+    },
+    explanation: {
+        marginTop: theme.spacing(2),
+        color: theme.palette.text.secondary,
+    },
 });
 
-/**
- * @typedef {object} SettingsProps
- * @property {Record<string, string>} classes
- * @property {Record<string, any>} native
- * @property {(attr: string, value: any) => void} onChange
- */
-
-/**
- * @typedef {object} SettingsState
- * @property {undefined} [dummy] Delete this and add your own state properties here
- */
-
-/**
- * @extends {React.Component<SettingsProps, SettingsState>}
- */
 class Settings extends React.Component {
-	constructor(props) {
-		super(props);
-		this.state = {};
-	}
+    render() {
+        const { classes, native, onChange } = this.props;
 
-	/**
-	 * @param {AdminWord} title
-	 * @param {string} attr
-	 * @param {string} type
-	 */
-	renderInput(title, attr, type) {
-		return (
-			<TextField
-				label={I18n.t(title)}
-				className={`${this.props.classes.input} ${this.props.classes.controlElement}`}
-				value={this.props.native[attr]}
-				type={type || "text"}
-				onChange={(e) => this.props.onChange(attr, e.target.value)}
-				margin="normal"
-			/>
-		);
-	}
-
-	/**
-	 * @param {AdminWord} title
-	 * @param {string} attr
-	 * @param {{ value: string; title: AdminWord }[]} options
-	 * @param {React.CSSProperties} [style]
-	 */
-	renderSelect(title, attr, options, style) {
-		return (
-			<FormControl
-				className={`${this.props.classes.input} ${this.props.classes.controlElement}`}
-				style={{
-					paddingTop: 5,
-					...style
-				}}
-			>
-				<Select
-					value={this.props.native[attr] || "_"}
-					onChange={(e) => this.props.onChange(attr, e.target.value === "_" ? "" : e.target.value)}
-					input={<Input name={attr} id={attr + "-helper"} />}
-				>
-					{options.map((item) => (
-						<MenuItem key={"key-" + item.value} value={item.value || "_"}>
-							{I18n.t(item.title)}
-						</MenuItem>
-					))}
-				</Select>
-				<FormHelperText>{I18n.t(title)}</FormHelperText>
-			</FormControl>
-		);
-	}
-
-	/**
-	 * @param {AdminWord} title
-	 * @param {string} attr
-	 * @param {React.CSSProperties} [style]
-	 */
-	renderCheckbox(title, attr, style) {
-		return (
-			<FormControlLabel
-				key={attr}
-				style={{
-					paddingTop: 5,
-					...style
-				}}
-				className={this.props.classes.controlElement}
-				control={
-					<Checkbox
-						checked={this.props.native[attr]}
-						onChange={() => this.props.onChange(attr, !this.props.native[attr])}
-						color="primary"
-					/>
-				}
-				label={I18n.t(title)}
-			/>
-		);
-	}
-
-	render() {
-		return (
-			<form className={this.props.classes.tab}>
-			</form>
-		);
-	}
+        return (
+            <div className={classes.root}>
+                <Typography variant="h6">Huawei Charger Configuration</Typography>
+                
+                <TextField
+                    className={classes.input}
+                    label="IP Address"
+                    value={native.ipAddress || ''}
+                    onChange={e => onChange('ipAddress', e.target.value)}
+                    margin="normal"
+                />
+                
+                <TextField
+                    className={classes.input}
+                    label="Port"
+                    value={native.port || '502'}
+                    onChange={e => onChange('port', e.target.value)}
+                    margin="normal"
+                />
+                
+                <TextField
+                    className={classes.input}
+                    label="Unit ID"
+                    value={native.unitId || '1'}
+                    onChange={e => onChange('unitId', e.target.value)}
+                    margin="normal"
+                />
+                
+                <FormControl className={classes.formControl}>
+                    <InputLabel>Reconnect Interval</InputLabel>
+                    <Select
+                        value={native.reconnectInterval || 60000}
+                        onChange={e => onChange('reconnectInterval', e.target.value)}
+                    >
+                        <MenuItem value={0}>Immediately</MenuItem>
+                        <MenuItem value={300000}>5 minutes</MenuItem>
+                        <MenuItem value={600000}>10 minutes</MenuItem>
+                        <MenuItem value={900000}>15 minutes</MenuItem>
+                        <MenuItem value={1800000}>30 minutes</MenuItem>
+                        <MenuItem value={3600000}>60 minutes</MenuItem>
+                    </Select>
+                </FormControl>
+                
+                <Typography variant="body2" className={classes.explanation}>
+                    The charger closes the connection every 65 seconds. You can choose how often the adapter should reconnect.
+                </Typography>
+            </div>
+        );
+    }
 }
 
 export default withStyles(styles)(Settings);
